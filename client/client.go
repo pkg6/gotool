@@ -16,16 +16,6 @@ import (
 	"time"
 )
 
-var (
-	headerUserAgentKey   = "User-Agent"
-	headerContentTypeKey = "Content-Type"
-	FormContentType      = "application/x-www-form-urlencoded;charset=utf-8"
-	FormASCIIContentType = "application/x-www-form-urlencoded"
-	JsonContentType      = "application/json; charset=utf-8"
-	JsonpContentType     = "application/javascript; charset=utf-8"
-	JsonASCIIContentType = "application/json"
-)
-
 type Client struct {
 	debug bool
 	log   log.ILogger
@@ -153,8 +143,8 @@ func (c *Client) PostFiles(files []FileInfo, params types.MapStrings) ([]byte, e
 			return nil, err
 		}
 	}
-	c.SetHeader(headerContentTypeKey, bodyWriter.FormDataContentType())
-	bodyWriter.Close()
+	c.SetHeader(HeaderContentTypeKey, bodyWriter.FormDataContentType())
+	_ = bodyWriter.Close()
 	for key, val := range params {
 		_ = bodyWriter.WriteField(key, val)
 	}
@@ -172,14 +162,14 @@ func (c *Client) PostFile(name string, file *os.File, params types.MapStrings) (
 
 // PostForm 表单提交
 func (c *Client) PostForm(params url.Values) ([]byte, error) {
-	c.header(headerContentTypeKey, FormContentType)
+	c.header(HeaderContentTypeKey, FormContentType)
 	c.BuildUrl(c.QueryParam)
 	return c.Do(http.MethodPost, c.url.String(), strings.NewReader(params.Encode()), nil, nil)
 }
 
 // PostJson json提交
 func (c *Client) PostJson(body any) ([]byte, error) {
-	c.header(headerContentTypeKey, JsonContentType)
+	c.header(HeaderContentTypeKey, JsonContentType)
 	var jsonStr string
 	var verify bool
 	if str, ok := body.(string); ok {

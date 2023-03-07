@@ -5,6 +5,28 @@ import (
 	"github.com/pkg6/gotool/types"
 )
 
+var (
+	HeaderUserAgentKey   = "User-Agent"
+	HeaderContentTypeKey = "Content-Type"
+	FormContentType      = "application/x-www-form-urlencoded;charset=utf-8"
+	FormASCIIContentType = "application/x-www-form-urlencoded"
+	JsonContentType      = "application/json; charset=utf-8"
+	JsonpContentType     = "application/javascript; charset=utf-8"
+	JsonASCIIContentType = "application/json"
+)
+
+// WithUserAgent 携带User-Agent
+func (c *Client) WithUserAgent(userAgent string) *Client {
+	c.SetHeader(HeaderUserAgentKey, userAgent)
+	return c
+}
+
+// WithContentType 如果设置Content-Type就不需要进行覆盖
+func (c *Client) WithContentType(contentType string) *Client {
+	c.SetHeader(HeaderContentTypeKey, contentType)
+	return c
+}
+
 // WithBasicAuth 携带Authorization
 func (c *Client) WithBasicAuth(username, password string) *Client {
 	if c.debug {
@@ -45,13 +67,7 @@ func (c *Client) SetHeader(key, value string) *Client {
 	return c
 }
 
-// WithUserAgent 携带User-Agent
-func (c *Client) WithUserAgent(userAgent string) *Client {
-	c.Header.Set(headerUserAgentKey, userAgent)
-	return c
-}
-
-// 如果设置Content-Type就不需要进行覆盖
+// 如果设置就不需要进行覆盖
 func (c *Client) header(key, value string) *Client {
 	c.Header.SetForce(key, value, false)
 	return c
