@@ -3,11 +3,11 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pkg6/gotool/log"
+	"fmt"
+	"github.com/pkg6/gotool/logger"
 	"github.com/pkg6/gotool/types"
 	"io"
 	"io/ioutil"
-	log2 "log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -17,10 +17,8 @@ import (
 )
 
 type Client struct {
-	debug bool
-	log   log.ILogger
-	url   *url.URL
-
+	debug      bool
+	url        *url.URL
 	BaseURL    string
 	QueryParam types.MapStrings
 	Header     types.MapStrings
@@ -37,9 +35,6 @@ func New(baseURL string, fns ...func(client *Client)) *Client {
 	client.SetBaseURL(baseURL)
 	if client.httpClient == nil {
 		client.httpClient = http.DefaultClient
-	}
-	if client.log == nil {
-		client.SetLog(log.Logger{Log: log2.Default()}.I())
 	}
 	if client.TimeOut == 0 {
 		client.SetTimeOut(10)
@@ -58,10 +53,10 @@ func (c Client) Clone() *Client {
 	c.Cookie = types.MapStrings{}
 	c.TimeOut = 0
 	c.httpClient = nil
-	c.log = nil
 	c.url, _ = url.Parse("")
 	c.Request = nil
 	c.Response = nil
+	logger.SetPrefix("GoTool Client ")
 	return &c
 }
 func (c *Client) Debug() *Client {
@@ -76,8 +71,8 @@ func (c *Client) SetTimeOut(timeOut int) *Client {
 	c.TimeOut = timeOut
 	return c
 }
-func (c *Client) SetLog(log log.ILogger) *Client {
-	c.log = log
+func (c *Client) SetLog(w io.Writer) *Client {
+	logger.SetOutput(w)
 	return c
 }
 
@@ -132,7 +127,7 @@ func (c *Client) PostFiles(files []FileInfo, params types.MapStrings) ([]byte, e
 			return nil, err
 		}
 		if c.debug {
-			c.log.Debug("Client.Upload fileName=%s fileSize=%v fileMode=%v fileModTime=%s", stat.Name(), stat.Size(), stat.Mode(), stat.ModTime())
+			logger.Debug("Client.Upload FileInfo", stat)
 		}
 		fileWriter, err := bodyWriter.CreateFormFile(file.Name, stat.Name())
 		if err != nil {
@@ -208,26 +203,26 @@ func (c *Client) Do(method, url string, body io.Reader, header types.MapStrings,
 		})
 	}
 	if c.debug {
-		c.log.Debug("Client.Do.Request %s %s", method, url)
-		c.log.Debug("Client.Do.Request Header  %s", headers)
-		c.log.Debug("Client.Do.Request Cookie  %s", cookies)
+		logger.Debug(fmt.Sprintf("Client.Do.Request %s %s", method, url), nil)
+		logger.Debug("Client.Do.Request Header", headers)
+		logger.Debug("Client.Do.Request Cookie ", cookie)
 	}
 	c.Response, err = c.httpClient.Do(c.Request)
 	if err != nil {
-		c.log.Error("client.Do.httpClient.Do err=%v", err)
+		logger.Error(fmt.Sprintf("client.Do.httpClient.Do err=%v", err), nil)
 		return nil, err
 	}
 	defer c.Response.Body.Close()
 	bodyByte, err := ioutil.ReadAll(c.Response.Body)
 	if err != nil {
-		c.log.Error("Client.Request.ioutil.ReadAll err=%v", err)
+		logger.Error(fmt.Sprintf("Client.Request.ioutil.ReadAll err=%v", err), nil)
 		return nil, err
 	}
 	if c.debug {
-		c.log.Debug("Client.Do.Response %s %s", c.Response.Status, method)
-		c.log.Debug("Client.Do.Response Header  %s", c.Response.Header)
-		c.log.Debug("Client.Do.Response Cookie  %s", c.Response.Cookies())
-		c.log.Debug("Client.Do.Response body  %s", string(bodyByte))
+		logger.Debug("Client.Do.Response", c.Response)
+		logger.Debug("Client.Do.Response Header", c.Response.Header)
+		logger.Debug("Client.Do.Response Cookie ", c.Response.Cookies())
+		logger.Debug("Client.Do.Response body", string(bodyByte))
 	}
 	return bodyByte, err
 }

@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/base64"
+	"fmt"
+	"github.com/pkg6/gotool/logger"
 	"github.com/pkg6/gotool/types"
 )
 
@@ -30,7 +32,7 @@ func (c *Client) WithContentType(contentType string) *Client {
 // WithBasicAuth 携带Authorization
 func (c *Client) WithBasicAuth(username, password string) *Client {
 	if c.debug {
-		c.log.Debug("with BasicAuth username: %s ,password:", username, password)
+		logger.Debug(fmt.Sprintf("with BasicAuth username: %s ,password:%s", username, password), nil)
 	}
 	c.WithToken(base64.StdEncoding.EncodeToString([]byte(username+":"+password)), "", "")
 	return c
@@ -47,7 +49,7 @@ func (c *Client) WithToken(token, tokenKey, tokenType string) *Client {
 		tokenKey = "Authorization"
 	}
 	if c.debug {
-		c.log.Debug("set Token Key=%s value", tokenType, token)
+		logger.Debug(fmt.Sprintf("set Token Key=%s value=%s", tokenType, token), nil)
 	}
 	c.SetHeader(tokenKey, token)
 	return c

@@ -1,4 +1,4 @@
-package types
+package i
 
 type IJson interface {
 	JsonEncode() string
