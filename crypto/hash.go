@@ -19,52 +19,42 @@ import (
 	"os"
 )
 
+func HashHmacSumNil(hash hash.Hash, w []byte) []byte {
+	hash.Write(w)
+	return hash.Sum(nil)
+}
+
 func Md5Byte(p []byte) []byte {
-	h := md5.New()
-	h.Write(p)
-	return []byte(hex.EncodeToString(h.Sum(nil)))
+	return []byte(hex.EncodeToString(HashHmacSumNil(md5.New(), p)))
 }
 
 func Sha1Byte(p []byte) []byte {
-	h := sha1.New()
-	h.Write(p)
-	return []byte(hex.EncodeToString(h.Sum(nil)))
+	return []byte(hex.EncodeToString(HashHmacSumNil(sha1.New(), p)))
 }
 
 func Sha256Byte(p []byte) []byte {
-	h := sha256.New()
-	h.Write(p)
-	return []byte(hex.EncodeToString(h.Sum(nil)))
+	return []byte(hex.EncodeToString(HashHmacSumNil(sha256.New(), p)))
 }
 
 func Sha512Byte(p []byte) []byte {
-	h := sha512.New()
-	h.Write(p)
-	return []byte(hex.EncodeToString(h.Sum(nil)))
+	return []byte(hex.EncodeToString(HashHmacSumNil(sha512.New(), p)))
+
 }
 
 func Md5String(s string) string {
-	h := md5.New()
-	h.Write([]byte(s))
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(HashHmacSumNil(md5.New(), []byte(s)))
 }
 
 func Sha1String(s string) string {
-	h := sha1.New()
-	h.Write([]byte(s))
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(HashHmacSumNil(sha1.New(), []byte(s)))
 }
 
 func Sha256String(s string) string {
-	h := sha256.New()
-	h.Write([]byte(s))
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(HashHmacSumNil(sha256.New(), []byte(s)))
 }
 
 func Sha512String(s string) string {
-	h := sha512.New()
-	h.Write([]byte(s))
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(HashHmacSumNil(sha512.New(), []byte(s)))
 }
 
 func Crc32(data []byte) uint32 {
@@ -72,9 +62,7 @@ func Crc32(data []byte) uint32 {
 }
 
 func HashHmac(algo func() hash.Hash, data, key []byte) string {
-	h := hmac.New(algo, key)
-	h.Write(data)
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(HashHmacSumNil(hmac.New(algo, key), data))
 }
 
 func Md5File(path string) (string, error) {
@@ -88,13 +76,13 @@ func Md5File(path string) (string, error) {
 		return "", err
 	}
 	var size int64 = 1048576 // 1M
-	hash := md5.New()
+	h := md5.New()
 	if fi.Size() < size {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", err
 		}
-		hash.Write(data)
+		h.Write(data)
 	} else {
 		b := make([]byte, size)
 		for {
@@ -102,10 +90,10 @@ func Md5File(path string) (string, error) {
 			if err != nil {
 				break
 			}
-			hash.Write(b[:n])
+			h.Write(b[:n])
 		}
 	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func Sha1File(path string) (string, error) {
