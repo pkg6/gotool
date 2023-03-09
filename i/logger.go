@@ -1,11 +1,15 @@
 package i
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type ILogger interface {
 	SetOutput(w io.Writer)
 	SetPrefix(prefix string)
 	SetFlags(flag int)
+	SetContext(ctx context.Context)
 	Emergency(message string, context any)
 	Alert(message string, context any)
 	Critical(message string, context any)

@@ -1,42 +1,48 @@
 package logger
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
-var Default = New()
+var l = New()
 
 func Reset() {
-	Default = New()
+	l = New()
 }
 func SetOutput(w io.Writer) {
-	Default.SetOutput(w)
+	l.SetOutput(w)
 }
 func SetPrefix(s string) {
-	Default.SetPrefix(s)
+	l.SetPrefix(s)
+}
+func SetContext(ctx context.Context) {
+	l.SetContext(ctx)
 }
 func Emergency(message string, context any) {
-	Default.Emergency(message, context)
+	l.Emergency(message, context)
 }
 func Alert(message string, context any) {
-	Default.Alert(message, context)
+	l.Alert(message, context)
 }
 func Critical(message string, context any) {
-	Default.Critical(message, context)
+	l.Critical(message, context)
 }
 func Error(message string, context any) {
-	Default.Error(message, context)
+	l.Error(message, context)
 }
 func Warning(message string, context any) {
-	Default.Warning(message, context)
+	l.Warning(message, context)
 }
 func Notice(message string, context any) {
-	Default.Notice(message, context)
+	l.Notice(message, context)
 }
 func Info(message string, context any) {
-	Default.Info(message, context)
+	l.Info(message, context)
 }
 func Debug(message string, context any) {
-	Default.Debug(message, context)
+	l.Debug(message, context)
 }
 func Log(level, message string, context any) {
-	Default.Log(level, message, context)
+	l.Log(level, message, context)
 }

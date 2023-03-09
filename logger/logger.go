@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,8 @@ func New() *Logger {
 }
 
 type Logger struct {
-	l *log.Logger
+	l   *log.Logger
+	Ctx context.Context
 }
 
 func (l *Logger) SetOutput(w io.Writer) {
@@ -24,6 +26,10 @@ func (l *Logger) SetPrefix(prefix string) {
 }
 func (l *Logger) SetFlags(flag int) {
 	l.l.SetFlags(flag)
+}
+
+func (l *Logger) SetContext(ctx context.Context) {
+	l.Ctx = ctx
 }
 func (l *Logger) Emergency(message string, context any) {
 	l.Log(EMERGENCY, message, context)
@@ -56,13 +62,20 @@ func (l *Logger) Debug(message string, context any) {
 	l.Log(DEBUG, message, context)
 }
 func (l *Logger) Log(level, message string, context any) {
-	s := fmt.Sprintf("%s %s %v", level, message, context)
+	s := level
+	s += " " + message
+
 	if context != nil {
 		t := reflect.TypeOf(context)
 		switch t.Kind() {
 		case reflect.Struct, reflect.Slice, reflect.Func, reflect.Map, reflect.Interface:
-			s = fmt.Sprintf("%s %s %#v", level, message, context)
+			s += " " + fmt.Sprintf("%#v", context)
 		}
+	} else {
+		s += " " + fmt.Sprintf("%v", context)
+	}
+	if l.Ctx != nil {
+		s += " " + fmt.Sprintf("%#v", l.Ctx)
 	}
 	_ = l.l.Output(2, s)
 	if level == ERROR {
