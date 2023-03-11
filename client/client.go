@@ -3,41 +3,21 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/pkg6/gotool/logger"
 	"github.com/pkg6/gotool/types"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 )
-
-type Client struct {
-	debug      bool
-	url        *url.URL
-	BaseURL    string
-	QueryParam types.MapStrings
-	Header     types.MapStrings
-	Cookie     types.MapStrings
-	TimeOut    int
-	httpClient *http.Client
-	//只有调用do方法的时候才能调用
-	Request  *http.Request
-	Response *http.Response
-}
 
 func New(baseURL string, fns ...func(client *Client)) *Client {
 	client := Client{}.Clone()
 	client.SetBaseURL(baseURL)
 	if client.httpClient == nil {
-		client.httpClient = http.DefaultClient
-	}
-	if client.TimeOut == 0 {
-		client.SetTimeOut(10)
+		client.SetClient(nil)
 	}
 	for _, fn := range fns {
 		fn(client)
@@ -45,16 +25,32 @@ func New(baseURL string, fns ...func(client *Client)) *Client {
 	return client
 }
 
+type Client struct {
+	debug bool
+	// base url
+	baseURL string
+	// query
+	query types.MapStrings
+	//header
+	headers types.MapStrings
+	//cookie
+	cookies types.MapStrings
+	//必须需要初始化
+	httpClient *http.Client
+	//最终执行的生成的url
+	URL *url.URL
+	//响应
+	Response *http.Response
+}
+
 func (c Client) Clone() *Client {
 	c.debug = false
-	c.BaseURL = ""
-	c.QueryParam = types.MapStrings{}
-	c.Header = types.MapStrings{}
-	c.Cookie = types.MapStrings{}
-	c.TimeOut = 0
+	c.baseURL = ""
+	c.query = types.MapStrings{}
+	c.headers = types.MapStrings{}
+	c.cookies = types.MapStrings{}
 	c.httpClient = nil
-	c.url, _ = url.Parse("")
-	c.Request = nil
+	c.URL, _ = url.Parse("")
 	c.Response = nil
 	logger.SetPrefix("GoTool Client ")
 	return &c
@@ -63,36 +59,10 @@ func (c *Client) Debug() *Client {
 	c.debug = true
 	return c
 }
-func (c *Client) SetBaseURL(url string) *Client {
-	c.BaseURL = strings.TrimRight(url, "/")
-	return c
-}
-func (c *Client) SetTimeOut(timeOut int) *Client {
-	c.TimeOut = timeOut
-	return c
-}
-func (c *Client) SetLog(w io.Writer) *Client {
-	logger.SetOutput(w)
-	return c
-}
-
-// SetQueryParams 设置url请求参数
-func (c *Client) SetQueryParams(params types.MapStrings) *Client {
-	for p, v := range params {
-		c.SetQueryParam(p, v)
-	}
-	return c
-}
-
-// SetQueryParam 设置url请求参数
-func (c *Client) SetQueryParam(key, value string) *Client {
-	c.QueryParam.Set(key, value)
-	return c
-}
 
 // BuildUrl 生成完成的url参数复制给URL
-func (c *Client) BuildUrl(maps ...types.MapStrings) {
-	Url, _ := url.Parse(c.BaseURL)
+func (c *Client) buildUrl(maps ...types.MapStrings) *url.URL {
+	Url, _ := url.Parse(c.baseURL)
 	q := Url.Query()
 	for _, m := range maps {
 		for k, v := range m {
@@ -100,13 +70,14 @@ func (c *Client) BuildUrl(maps ...types.MapStrings) {
 		}
 	}
 	Url.RawQuery = q.Encode()
-	c.url = Url
+	c.URL = Url
+	return c.URL
 }
 
 // Get get请求
 func (c *Client) Get(query types.MapStrings) ([]byte, error) {
-	c.BuildUrl(c.QueryParam, query)
-	return c.Do(http.MethodGet, c.url.String(), nil, nil, nil)
+	c.buildUrl(c.query, query)
+	return c.Do(http.MethodGet, c.URL.String(), nil, nil, nil)
 }
 
 // FileInfo 上传文件基本信息
@@ -143,8 +114,8 @@ func (c *Client) PostFiles(files []FileInfo, params types.MapStrings) ([]byte, e
 	for key, val := range params {
 		_ = bodyWriter.WriteField(key, val)
 	}
-	c.BuildUrl(c.QueryParam)
-	return c.Do(http.MethodPost, c.url.String(), bodyBuf, nil, nil)
+	c.buildUrl(c.query)
+	return c.Do(http.MethodPost, c.URL.String(), bodyBuf, nil, nil)
 }
 
 // PostFile 单文件上传
@@ -158,8 +129,8 @@ func (c *Client) PostFile(name string, file *os.File, params types.MapStrings) (
 // PostForm 表单提交
 func (c *Client) PostForm(params url.Values) ([]byte, error) {
 	c.header(HeaderContentTypeKey, FormContentType)
-	c.BuildUrl(c.QueryParam)
-	return c.Do(http.MethodPost, c.url.String(), strings.NewReader(params.Encode()), nil, nil)
+	c.buildUrl(c.query)
+	return c.Do(http.MethodPost, c.URL.String(), strings.NewReader(params.Encode()), nil, nil)
 }
 
 // PostJson json提交
@@ -177,52 +148,8 @@ func (c *Client) PostJson(body any) ([]byte, error) {
 		}
 	}
 	if verify {
-		c.BuildUrl(c.QueryParam)
-		return c.Do(http.MethodPost, c.url.String(), strings.NewReader(jsonStr), nil, nil)
+		c.buildUrl(c.query)
+		return c.Do(http.MethodPost, c.URL.String(), strings.NewReader(jsonStr), nil, nil)
 	}
 	return nil, nil
-}
-
-// Do 所有的请求都可以走这个方法
-func (c *Client) Do(method, url string, body io.Reader, header types.MapStrings, cookie types.MapStrings) ([]byte, error) {
-	var err error
-	c.Request, err = http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, err
-	}
-	c.httpClient.Timeout = time.Duration(c.TimeOut) * time.Second
-	headers := types.MergeMapsString(c.Header, header)
-	for hk, hv := range headers {
-		c.Request.Header.Set(hk, hv)
-	}
-	cookies := types.MergeMapsString(c.Cookie, cookie)
-	for ck, cv := range cookies {
-		c.Request.AddCookie(&http.Cookie{
-			Name:  ck,
-			Value: cv,
-		})
-	}
-	if c.debug {
-		logger.Debug(fmt.Sprintf("Client.Do.Request %s %s", method, url), nil)
-		logger.Debug("Client.Do.Request Header", headers)
-		logger.Debug("Client.Do.Request Cookie ", cookie)
-	}
-	c.Response, err = c.httpClient.Do(c.Request)
-	if err != nil {
-		logger.Error(fmt.Sprintf("client.Do.httpClient.Do err=%v", err), nil)
-		return nil, err
-	}
-	defer c.Response.Body.Close()
-	bodyByte, err := ioutil.ReadAll(c.Response.Body)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Client.Request.ioutil.ReadAll err=%v", err), nil)
-		return nil, err
-	}
-	if c.debug {
-		logger.Debug("Client.Do.Response", c.Response)
-		logger.Debug("Client.Do.Response Header", c.Response.Header)
-		logger.Debug("Client.Do.Response Cookie ", c.Response.Cookies())
-		logger.Debug("Client.Do.Response body", string(bodyByte))
-	}
-	return bodyByte, err
 }

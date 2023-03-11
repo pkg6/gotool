@@ -65,12 +65,12 @@ func (c *Client) SetHeaders(params types.MapStrings) *Client {
 
 // SetHeader 单独设置header
 func (c *Client) SetHeader(key, value string) *Client {
-	c.Header.Set(key, value)
+	c.headers.Set(key, value)
 	return c
 }
 
 // 如果设置就不需要进行覆盖
 func (c *Client) header(key, value string) *Client {
-	c.Header.SetForce(key, value, false)
+	c.headers.SetForce(key, value, false)
 	return c
 }
